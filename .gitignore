@@ -1,6 +1,0 @@
-/ai-learning-pathways
-/*.db
-/*.db-shm
-/*.db-wal
-/.env
-/coverage.out
