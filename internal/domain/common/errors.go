@@ -79,8 +79,12 @@ func WrapDependency(operation string, err error) error {
 }
 
 func AuthenticationLookupError(err error) error {
-	if errors.Is(err, ErrNotFound) {
-		return fmt.Errorf("unknown session: %w", err)
+	if err == nil {
+		return nil
 	}
-	return fmt.Errorf("session lookup: %w", ErrUnauthenticated)
+	// A missing or otherwise unresolvable session record means the supplied
+	// token is not a known credential. Report it as unauthenticated rather than
+	// not_found so callers cannot treat an expired or bogus token as a missing
+	// resource and retry it as a resource-absent error.
+	return fmt.Errorf("session lookup failed: %w: %w", ErrUnauthenticated, err)
 }

@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -118,5 +119,25 @@ func TestAuthenticationAndErrorMapping(t *testing.T) {
 	}
 	if envelope["error"]["code"] != "invalid_request" {
 		t.Fatalf("unexpected error envelope: %v", envelope)
+	}
+}
+
+func TestUnknownBearerTokenMapsToUnauthorized(t *testing.T) {
+	f := newHTTPFixture(t)
+	defer f.close()
+	request := httptest.NewRequest(http.MethodPost, "/v1/curricula", bytes.NewBufferString("{}"))
+	request.Header.Set("Authorization", "Bearer "+strings.Repeat("x", 64))
+	request.Header.Set("Content-Type", "application/json")
+	response := httptest.NewRecorder()
+	f.handler.ServeHTTP(response, request)
+	if response.Code != http.StatusUnauthorized {
+		t.Fatalf("unknown bearer token returned %d, expected 401: %s", response.Code, response.Body.String())
+	}
+	var envelope map[string]map[string]string
+	if err := json.Unmarshal(response.Body.Bytes(), &envelope); err != nil {
+		t.Fatal(err)
+	}
+	if envelope["error"]["code"] != "unauthenticated" {
+		t.Fatalf("unknown bearer token error code = %q, expected unauthenticated", envelope["error"]["code"])
 	}
 }
